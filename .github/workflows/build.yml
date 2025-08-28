@@ -43,13 +43,8 @@ jobs:
         # This is the key step: It tells the repo tool to use YOUR forked device tree
         mkdir -p .repo/local_manifests
         # The next command builds the XML manifest file
-        echo '<?xml version="1.0" encoding="UTF-8"?>
-        <manifest>
-          <project path="device/xiaomi/twolip" name="${{ github.repository }}" remote="github" revision="lineage-20" />
-          <project name="LineageOS/android_kernel_xiaomi_sdm660" path="kernel/xiaomi/sdm660" remote="github" revision="lineage-20" />
-          <project name="TheMuppets/proprietary_vendor_xiaomi_twolip" path="vendor/xiaomi/twolip" remote="github" revision="lineage-20" />
-        </manifest>' > .repo/local_manifests/twolip.xml
-        
+        cp twolip.xml .repo/local_manifests/twolip.xml
+
         # Sync all the source code. This will take a long time.
         repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune --force-sync -j$(nproc --all)
 
