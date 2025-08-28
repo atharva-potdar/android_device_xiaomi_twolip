@@ -1,0 +1,76 @@
+name: LineageOS 23.0 Build
+
+
+on:
+  # This workflow runs every time you push a change to your repository's lineage-20 branch.
+  push:
+    branches:
+      - lineage-20
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest # Use a powerful, free Ubuntu server
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Build Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf imagemagick lib32ncurses5-dev lib32readline-dev lib32z1-dev libelf-dev liblz4-tool libncurses5 libncurses5-dev libsdl1.2-dev libssl-dev libxml2 libxml2-utils lzop pngcrush rsync schedtool squashfs-tools xsltproc zip zlib1g-dev
+
+    - name: Set up repo tool
+      run: |
+        mkdir -p ~/bin
+        curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+        chmod a+x ~/bin/repo
+        sudo ln -sf ~/bin/repo /usr/local/bin/repo
+
+    - name: Initialize LineageOS 23.0 source
+      run: |
+        mkdir -p ~/lineage
+        cd ~/lineage
+        git config --global user.name "atharva-potdar"
+        git config --global user.email "atharvapotdar07@gmail.com"
+        # Initialize the LineageOS 23.0 source tree (Android 16)
+        repo init -u https://github.com/LineageOS/android.git -b lineage-23.0 --git-lfs --depth=1
+
+    - name: Create Local Manifest and Sync Sources
+      run: |
+        cd ~/lineage
+        # This is the key step: It tells the repo tool to use YOUR forked device tree
+        mkdir -p .repo/local_manifests
+        # The next command builds the XML manifest file
+        echo '<?xml version="1.0" encoding="UTF-8"?>
+        <manifest>
+          <project path="device/xiaomi/twolip" name="${{ github.repository }}" remote="github" revision="lineage-20" />
+          <project name="LineageOS/android_kernel_xiaomi_sdm660" path="kernel/xiaomi/sdm660" remote="github" revision="lineage-20" />
+          <project name="TheMuppets/proprietary_vendor_xiaomi_twolip" path="vendor/xiaomi/twolip" remote="github" revision="lineage-20" />
+        </manifest>' > .repo/local_manifests/twolip.xml
+        
+        # Sync all the source code. This will take a long time.
+        repo sync -c --no-clone-bundle --no-tags --optimized-fetch --prune --force-sync -j$(nproc --all)
+
+    - name: Start the Build
+      run: |
+        cd ~/lineage
+        source build/envsetup.sh
+        lunch lineage_twolip-userdebug
+        # 'bacon' is the LineageOS command to build a full, flashable package
+        mka bacon -j$(nproc --all)
+
+    - name: Upload Build Logs on Failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: ~/lineage/out/ # Upload the entire 'out' directory for debugging
+
+    - name: Upload Build Output on Success
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: lineage-23-twolip-zip
+        path: ~/lineage/out/target/product/twolip/lineage-*.zip
