@@ -54,3 +54,16 @@ VENDOR_SECURITY_PATCH := 2018-11-01
 
 # Inherit the proprietary files
 include vendor/xiaomi/twolip/BoardConfigVendor.mk
+
+# -----------------------------------------------------------------------------
+
+# Unset deprecated power configurations inherited from sdm660-common
+# The := clears the variable, preventing it from being used.
+TARGET_USES_INTERACTION_BOOST :=
+TARGET_USES_QCOM_POWER_HALS :=
+
+# Enable the modern, standardized Power HAL
+TARGET_POWERHAL_MODE_SND := true
+
+# Enable the modern Health 2.1 HAL implementation
+BOARD_HEALTH_IMPLEMENTATION := libhealthd_board
